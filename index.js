@@ -21,6 +21,7 @@ app.post('/', async (req, res) => {
     const binary = Buffer.from(req.body, 'base64');
     const redmineUploadEndpoint = `https://${redmineHost}/uploads.json?filename=${redmineFileName}`;
 
+    // 30 seconds to upload single file to redmine
     const controller = new AbortController();
     const timeout = setTimeout(() => {
         controller.abort();
