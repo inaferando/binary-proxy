@@ -26,7 +26,7 @@ app.post('*', async (req, res) => {
         controller.abort();
     }, timeoutMs);
 
-    let redmineResponse = '';
+    let responseBody = '';
     try {
         const headers = {
             'Content-type': 'application/octet-stream'
@@ -51,7 +51,7 @@ app.post('*', async (req, res) => {
             signal: controller.signal
         });
 
-        redmineResponse = await response.json();
+        responseBody = await response.json();
 
         console.log(`Upload request to ${destinationUrl} finished. HTTP Status ${response.status}.`);
     } catch (err) {
@@ -62,7 +62,7 @@ app.post('*', async (req, res) => {
         clearTimeout(timeout);
     }
 
-    res.json(redmineResponse);
+    res.json(responseBody);
 });
 
 app.listen(port, () => {
