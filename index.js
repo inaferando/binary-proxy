@@ -50,7 +50,7 @@ app.post('/', async (req, res) => {
         clearTimeout(timeout);
     }
 
-    res.send(redmineResponse);
+    res.json(redmineResponse);
 });
 
 app.listen(port, () => {
