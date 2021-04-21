@@ -9,43 +9,55 @@ const port = process.env.PORT || 3000;
 
 app.use(express.text());
 
-app.post('/', async (req, res) => {
-    const redmineApiKey = req.headers['x-redmine-api-key'];
-    const redmineHost = req.headers['x-redmine-host'];
-    const redmineFileName = req.headers['x-redmine-file-name'];
+app.post('*', async (req, res) => {
+    const destinationHost = req.headers['x-destination-host'];
+    const timeoutMs = parseInt(req.headers['x-timeout-ms']) || 60000;
 
-    if (!(redmineApiKey && redmineHost && redmineFileName)) {
+    if (!destinationHost) {
         return res.send('NOT OK');
     }
 
     const binary = Buffer.from(req.body, 'base64');
-    const redmineUploadEndpoint = `https://${redmineHost}/uploads.json?filename=${redmineFileName}`;
+    const destinationUrl = `https://${destinationHost}${req.url}`;
 
     // 30 seconds to upload single file to redmine
     const controller = new AbortController();
     const timeout = setTimeout(() => {
         controller.abort();
-    }, 30000);
+    }, timeoutMs);
 
     let redmineResponse = '';
     try {
-        const response = await fetch(redmineUploadEndpoint, {
+        const headers = {
+            'Content-type': 'application/octet-stream'
+        };
+
+        for (const headerKey of Object.keys(req.headers)) {
+            // do not pass some keys
+            if (headerKey == 'x-destination-host' || headerKey == 'x-timeout-ms') {
+                continue;
+            }
+
+            // pass all headers if name starts from x-
+            if (headerKey.indexOf('x-') == 0) {
+                headers[headerKey] = req.headers[headerKey];
+            }
+        }
+
+        const response = await fetch(destinationUrl, {
             method: 'POST',
-            headers: {
-                'X-Redmine-API-Key': redmineApiKey,
-                'Content-type': 'application/octet-stream'
-            },
+            headers,
             body: binary,
             signal: controller.signal
         });
 
-        redmineResponse = await response.text();
+        redmineResponse = await response.json();
 
-        console.log(`Upload request to ${redmineUploadEndpoint} finished. HTTP Status ${response.status}.`);
+        console.log(`Upload request to ${destinationUrl} finished. HTTP Status ${response.status}.`);
     } catch (err) {
         // any error
         // empty string will be returned
-        console.log(`Upload request to ${redmineUploadEndpoint} FAILED. Error: ${err.message}`);
+        console.log(`Upload request to ${destinationUrl} FAILED. Error: ${err.message}`);
     } finally {
         clearTimeout(timeout);
     }
